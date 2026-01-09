@@ -1,0 +1,66 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Caches / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
+# =========================
+# Project outputs (bench artifacts)
+# =========================
+results/*.csv
+results/*.txt
+results/*.log
+bench_*.csv
+bench_v2_*.csv
+phase*_*.csv
+
+# If you prefer to keep the results folder itself in git:
+!results/.gitkeep
+
+# =========================
+# OS / Editor
+# =========================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# =========================
+# JetBrains / PyCharm
+# =========================
+.idea/
+# If you prefer to keep some .idea files, comment the line above
+# and use the more selective ignores below instead:
+# .idea/workspace.xml
+# .idea/tasks.xml
+# .idea/usage.statistics.xml
+# .idea/shelf/
+# .idea/httpRequests/
+# .idea/dataSources/
+# .idea/dataSources.local.xml

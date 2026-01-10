@@ -1,13 +1,3 @@
-
----
-
-## 4) Create `findings.md` (paste this)
-
-Create a new file: `findings.md`:
-
-```markdown
-# Findings (LM Studio local CPU inference)
-
 ## Phase 2 — Context scaling
 - Latency and TTFT increase sharply as prompt size grows.
 - On constrained CPU/RAM, prompt evaluation dominates end-to-end latency.

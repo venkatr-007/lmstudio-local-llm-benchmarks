@@ -1,106 +1,139 @@
 # lmstudio-local-llm-benchmarks
 
-Benchmark scripts for **LM Studio’s OpenAI-compatible local server**.
+A small, practical benchmark suite for **LM Studio local inference** focused on the operational questions that matter when you run a model locally:
 
-Primary metrics:
-- **TTFT** (time to first token)
-- **tokens/sec**
-- **aggregate throughput** (overall tokens/sec across runs)
+- Which decoding settings are stable and performant?
+- How does performance degrade as **context length grows**?
+- What happens under **concurrent load** (CPU-only, constrained RAM)?
+- Can we make **structured JSON output** reliable enough for tooling?
 
-> This repo targets LM Studio’s `/v1/chat/completions` endpoint (OpenAI-compatible). Adjust the base URL/port if your server differs.
-
----
-
-## Requirements
-
-- Python 3.9+ (recommended)
-- LM Studio running locally with **OpenAI-compatible server** enabled
+This repo targets LM Studio’s **OpenAI-compatible local server** (`/v1/chat/completions`) and produces simple CSV/JSON outputs you can graph later.
 
 ---
 
-## LM Studio setup (one-time)
+## Tested setup (example)
 
-1. Open **LM Studio**
-2. Start the **Local Server (OpenAI compatible)**
-3. Confirm the base URL (commonly):
-   - `http://localhost:1234/v1`
+- LM Studio local server (`lms server start --port 1234`)
+- Model: `qwen3-1.7b` (GGUF)
+- Hardware: CPU-only (no GPU), constrained RAM
+
+> You can use any model available in LM Studio; just update the `--model` argument (and context length) accordingly.
 
 ---
 
-## Python setup
+## What’s inside
 
-```bash
+### Phase 1 — Sampler sweep (baseline decoding)
+Benchmarks different sampler settings (`temperature`, `top_p`, `top_k`) and logs:
+- TTFT (time to first token)
+- total latency
+- tokens/sec
+
+Script:
+- `scripts/bench_chat_v2.py`
+
+### Phase 2 — Context scaling
+Measures how latency and TTFT change as prompt size increases (prompt multiplier approach).
+
+Script:
+- `scripts/bench_chat_v2a.py`
+
+### Phase 3 — Concurrency saturation
+Runs multiple simultaneous requests and reports:
+- mean latency
+- P95 latency (tail latency)
+- mean TTFT
+- requests/sec
+- aggregate tokens/sec
+
+Script:
+- `scripts/bench_concurrency.py`
+
+### Phase 4 — Structured output reliability (JSON)
+#### Phase 4.0 (raw)
+Measures whether the model returns **strict JSON only** (no extra text).
+
+Script:
+- `scripts/bench_json_reliability.py`
+
+#### Phase 4.1/4.2 (auto-repair + trials)
+Adds a safe post-processor that:
+- strips `<think>...</think>`
+- extracts the first balanced JSON object `{...}`
+- validates with `json.loads`
+
+Then runs multiple trials across prompt sizes + concurrency.
+
+Script:
+- `scripts/bench_json_reliability_v2.py`
+
+---
+
+## Quickstart
+
+### 0) Prereqs
+- Windows + PowerShell (or equivalent)
+- Python 3.9+ recommended
+- LM Studio installed with `lms` CLI available in PATH
+
+### 1) Create a venv and install deps
+```powershell
+cd D:\code\lmstudio-local-llm-benchmarks
 python -m venv .venv
-# Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
-
+python -m pip install -U pip
 pip install -r requirements.txt
 ```
 
-If this repo does not include `requirements.txt`, install the packages imported by the scripts (commonly `requests`, `rich`, etc.).
-
----
-
-## Configure endpoint + model
-
-Most scripts typically require (names may differ per script):
-- Server URL, e.g. `http://localhost:1234/v1/chat/completions`
-- Model id, e.g. `qwen3-1.7b` (whatever you loaded in LM Studio)
-
-Search the repo for these constants/args and update them as needed:
-
-```powershell
-git grep -n "localhost:1234|/v1/chat/completions|MODEL\s*=|URL\s*="
+### 2) Start LM Studio server and load a model
+In one terminal:
+```bash
+lms server start --port 1234
+lms load qwen3-1.7b --context-length 1024 --gpu off
 ```
 
----
+> If you’re using a different model name or context length, update the `lms load ...` command and/or script arguments.
 
-## Run a benchmark
+### 3) Run benchmarks
+In another terminal (venv activated):
 
-This repo may contain one or more scripts under `scripts/`.
-
-List what’s available:
-
+**Phase 1 (sampler sweep):**
 ```powershell
-Get-ChildItem .\scripts -File
+python .\scripts\bench_chat_v2.py --model qwen3-1.7b --base-url http://localhost:1234/v1
 ```
 
-Run the script you want (example):
-
+**Phase 2 (context scaling):**
 ```powershell
-python .\scripts\<your_script>.py --help
-python .\scripts\<your_script>.py
+python .\scripts\bench_chat_v2a.py --model qwen3-1.7b --base-url http://localhost:1234/v1
 ```
 
-> Replace `<your_script>.py` with the actual filename(s) in your repo.
+**Phase 3 (concurrency):**
+```powershell
+python .\scripts\bench_concurrency.py --model qwen3-1.7b --base-url http://localhost:1234/v1
+```
+
+**Phase 4 (JSON reliability):**
+```powershell
+python .\scripts\bench_json_reliability.py --model qwen3-1.7b --base-url http://localhost:1234/v1
+python .\scripts\bench_json_reliability_v2.py --model qwen3-1.7b --base-url http://localhost:1234/v1
+```
 
 ---
 
 ## Outputs
 
-Bench outputs often go into a folder like `results/` (CSV/JSON/logs).  
-This repo’s `.gitignore` should ignore `results/` so you don’t accidentally commit large or noisy artifacts.
-
-If your scripts write outputs elsewhere, update `.gitignore` accordingly.
+Most scripts write timestamped outputs (typically under a `results/` directory).  
+If you want results tracked in git, remove `results/` from `.gitignore`. Otherwise, keep results ignored and commit only **code**.
 
 ---
 
-## Metric notes
+## Security / hygiene
 
-- **TTFT (s)**: time from request start → first streamed token received
-- **tokens/sec**: completion tokens divided by generation time (excluding TTFT if computed that way in the script)
-- **aggregate tokens/sec**: total completion tokens across runs divided by total wall time
-
----
-
-## Safety / secrets
-
-Before making a repo public:
-- do not commit `.env`, API keys, or private credentials
-- keep `.venv/` out of git
+- Do **not** commit `.env` files or any API keys/tokens.
+- This repo is intended to run against *local* LM Studio; you generally should not need any external API keys.
 
 ---
 
 ## License
 
-MIT License
+MIT (see `LICENSE`).

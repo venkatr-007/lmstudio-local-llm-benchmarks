@@ -1,53 +1,47 @@
-# --- Python ---
-__pycache__/
-*.py[cod]
-*.pyd
-*.so
-*.egg-info/
-dist/
-build/
-.eggs/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-.coverage.*
-htmlcov/
-
-# --- Virtual environments ---
+# ---- Python / Virtual envs ----
 .venv/
 venv/
 ENV/
 env/
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pkl
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
 
-# --- Jupyter ---
+# ---- Jupyter / IDE ----
 .ipynb_checkpoints/
-
-# --- OS / Editor ---
-.DS_Store
-Thumbs.db
-Desktop.ini
-
 .vscode/
 .idea/
 *.iml
 
-# --- Logs / temp ---
-*.log
-*.tmp
+# ---- OS ----
+.DS_Store
+Thumbs.db
+Desktop.ini
 
-# --- Project outputs (bench results) ---
+# ---- Outputs (bench results) ----
 results/
-out/
 reports/
+out/
+output/
+*.log
 
-# --- Local config/secrets (keep templates only) ---
+# ---- Secrets / creds (defensive) ----
 .env
 .env.*
 *.pem
 *.p12
+*.key
 id_rsa
+id_rsa.pub
 id_ed25519
+id_ed25519.pub
 credentials*
 secret*
 secrets*

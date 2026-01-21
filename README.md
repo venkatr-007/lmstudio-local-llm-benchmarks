@@ -1,69 +1,106 @@
 # lmstudio-local-llm-benchmarks
 
-A small, practical benchmark suite for **LM Studio local inference** that focuses on the real operational questions:
-- Which decoding settings are stable and performant?
-- How does performance degrade as **context length grows**?
-- What happens under **concurrent load** on CPU?
-- Can we make **structured JSON output** reliable enough for tooling?
+Benchmark scripts for **LM Studio’s OpenAI-compatible local server**.
 
-Tested setup (example):
-- LM Studio local server (`lms server start --port 1234`)
-- Model: `qwen3-1.7b` (GGUF)
-- Hardware: CPU-only (no GPU), constrained RAM
+Primary metrics:
+- **TTFT** (time to first token)
+- **tokens/sec**
+- **aggregate throughput** (overall tokens/sec across runs)
 
-## What’s inside
+> This repo targets LM Studio’s `/v1/chat/completions` endpoint (OpenAI-compatible). Adjust the base URL/port if your server differs.
 
-### Phase 1 — Sampler sweep (baseline decoding)
-Benchmarks different sampler settings (temperature/top_p/top_k) and logs:
-- TTFT (time to first token)
-- total latency
-- tokens/sec
+---
 
-Scripts:
-- `scripts/bench_chat_v2.py`
+## Requirements
 
-### Phase 2 — Context scaling
-Measures how latency and TTFT change as prompt size increases (prompt multiplier approach).
+- Python 3.9+ (recommended)
+- LM Studio running locally with **OpenAI-compatible server** enabled
 
-Scripts:
-- `scripts/bench_chat_v2a.py`
+---
 
-### Phase 3 — Concurrency saturation
-Runs multiple simultaneous requests and reports:
-- mean latency
-- P95 latency (tail latency)
-- mean TTFT
-- requests/sec
-- aggregate tokens/sec
+## LM Studio setup (one-time)
 
-Scripts:
-- `scripts/bench_concurrency.py`
+1. Open **LM Studio**
+2. Start the **Local Server (OpenAI compatible)**
+3. Confirm the base URL (commonly):
+   - `http://localhost:1234/v1`
 
-### Phase 4 — Structured output reliability (JSON)
-#### Phase 4.0 (raw)
-Measures whether the model returns **strict JSON only** (no extra text).
-Result observed: raw strict JSON validity can be effectively 0% due to `<think>` blocks and multiple JSON objects.
+---
 
-Scripts:
-- `scripts/bench_json_reliability.py`
-
-#### Phase 4.1/4.2 (auto-repair + trials)
-Adds a safe post-processor:
-- strips `<think>...</think>`
-- extracts the first balanced JSON object `{...}`
-- validates with `json.loads`
-
-Then runs multiple trials across prompt sizes + concurrency.
-Result observed in this environment: repaired JSON validity reached 100% over 90 requests.
-
-Scripts:
-- `scripts/bench_json_reliability_v2.py`
-
-## Quickstart
-
-### 1) Start LM Studio server and load model
-In one terminal:
+## Python setup
 
 ```bash
-lms server start --port 1234
-lms load qwen3-1.7b --context-length 1024 --gpu off
+python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+```
+
+If this repo does not include `requirements.txt`, install the packages imported by the scripts (commonly `requests`, `rich`, etc.).
+
+---
+
+## Configure endpoint + model
+
+Most scripts typically require (names may differ per script):
+- Server URL, e.g. `http://localhost:1234/v1/chat/completions`
+- Model id, e.g. `qwen3-1.7b` (whatever you loaded in LM Studio)
+
+Search the repo for these constants/args and update them as needed:
+
+```powershell
+git grep -n "localhost:1234|/v1/chat/completions|MODEL\s*=|URL\s*="
+```
+
+---
+
+## Run a benchmark
+
+This repo may contain one or more scripts under `scripts/`.
+
+List what’s available:
+
+```powershell
+Get-ChildItem .\scripts -File
+```
+
+Run the script you want (example):
+
+```powershell
+python .\scripts\<your_script>.py --help
+python .\scripts\<your_script>.py
+```
+
+> Replace `<your_script>.py` with the actual filename(s) in your repo.
+
+---
+
+## Outputs
+
+Bench outputs often go into a folder like `results/` (CSV/JSON/logs).  
+This repo’s `.gitignore` should ignore `results/` so you don’t accidentally commit large or noisy artifacts.
+
+If your scripts write outputs elsewhere, update `.gitignore` accordingly.
+
+---
+
+## Metric notes
+
+- **TTFT (s)**: time from request start → first streamed token received
+- **tokens/sec**: completion tokens divided by generation time (excluding TTFT if computed that way in the script)
+- **aggregate tokens/sec**: total completion tokens across runs divided by total wall time
+
+---
+
+## Safety / secrets
+
+Before making a repo public:
+- do not commit `.env`, API keys, or private credentials
+- keep `.venv/` out of git
+
+---
+
+## License
+
+MIT License

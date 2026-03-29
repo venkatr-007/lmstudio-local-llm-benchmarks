@@ -1,5 +1,8 @@
 # lmstudio-local-llm-benchmarks
 
+## Context
+Part of ongoing exploration into retrieval-aware LLM pipelines, focusing on performance benchmarking (TTFT, throughput) and system-level behavior of LLM inference.
+
 A small, practical benchmark suite for **LM Studio local inference** focused on the operational questions that matter when you run a model locally:
 
 - Which decoding settings are stable and performant?
